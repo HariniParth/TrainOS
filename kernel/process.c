@@ -12,7 +12,7 @@ PORT create_process (void (*ptr_to_new_proc) (PROCESS, PARAM),
 {
 	MEM_ADDR esp;
 	PROCESS new_proc;
-
+	PORT new_port;
 	if(prio >= MAX_READY_QUEUES)
 		panic("create(): Bad Priority");
 	if(next_free_pcb == NULL)
@@ -27,6 +27,7 @@ PORT create_process (void (*ptr_to_new_proc) (PROCESS, PARAM),
 	new_proc->first_port = NULL;
 	new_proc->name = name;
 
+	new_port = create_new_port(new_proc);
 	esp = 640 * 1024 - (new_proc - pcb) * 16 * 1024;
 
 #define PUSH(x) esp -= 4; \
@@ -48,7 +49,7 @@ PORT create_process (void (*ptr_to_new_proc) (PROCESS, PARAM),
 
 	new_proc->esp = esp;
 	add_ready_queue(new_proc);
-	return NULL;
+	return new_port;
 }
 
 
