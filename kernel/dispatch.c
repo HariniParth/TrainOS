@@ -25,6 +25,8 @@ unsigned ready_procs;
 void add_ready_queue (PROCESS proc)
 {
 	int prio;
+	volatile int flag;
+	DISABLE_INTR(flag);
 
 	assert(proc->magic == MAGIC_PCB);
 	prio = proc->priority;
@@ -40,6 +42,7 @@ void add_ready_queue (PROCESS proc)
 		ready_queue[prio]->prev = proc;
 	}
 	proc->state = STATE_READY;
+	ENABLE_INTR(flag);
 }
 
 
@@ -54,6 +57,8 @@ void add_ready_queue (PROCESS proc)
 void remove_ready_queue (PROCESS proc)
 {
 	int prio;
+	volatile int flag;
+	DISABLE_INTR(flag);
 
 	assert(proc->magic == MAGIC_PCB);
 	prio = proc->priority;
@@ -65,6 +70,7 @@ void remove_ready_queue (PROCESS proc)
 		proc->prev->next = proc->next;
 		proc->next->prev = proc->prev;
 	}
+	ENABLE_INTR(flag);
 }
 
 
@@ -81,7 +87,9 @@ PROCESS dispatcher()
 {
 	PROCESS new_proc;
 	unsigned i;
+	volatile int flag;
 
+	DISABLE_INTR(flag);
 	i = table[ready_procs];
 	assert(i!=-1);
 	if(i == active_proc->priority)
@@ -89,6 +97,7 @@ PROCESS dispatcher()
 	else
 		new_proc = ready_queue[i];
 
+	ENABLE_INTR(flag);
 	return new_proc;
 }
 
@@ -104,6 +113,8 @@ PROCESS dispatcher()
  */
 void resign()
 {
+	asm ("pushfl;cli;popl %eax;xchgl (%esp),%eax");
+    asm ("push %cs;pushl %eax");
 	asm ("pushl %eax;pushl %ecx;pushl %edx");
 	asm ("pushl %ebx;pushl %ebp;pushl %esi;pushl %edi");
 	asm ("movl %%esp, %0" : "=r" (active_proc->esp) :);
@@ -111,6 +122,7 @@ void resign()
 	asm ("movl %0, %%esp" :: "r" (active_proc->esp));
 	asm ("popl %edi;popl %esi;popl %ebp;popl %ebx");
 	asm ("popl %edx; popl %ecx;popl %eax");
+	asm ("iret");
 }
 
 
